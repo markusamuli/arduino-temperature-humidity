@@ -214,7 +214,8 @@ void loop()
 
   // Values for tracking the time
   static int measurementInterval = 10;
-  static int dayCounter = 0;
+  static int dayIndex = 0;
+  static int prevDay = 0;
   static int previousHour = 0;
   static int prevSecond = 0;
 
@@ -233,6 +234,13 @@ void loop()
     }
   }
 
+  // If day is different, calculate new averages
+  if (prevDay != day())
+  {
+    calculateAverages();
+    prevDay = day();
+  }
+
   // Check if the measurement values have been updated recently
   if (prevSecond - second() > measurementInterval 
       || second() - prevSecond > measurementInterval)
@@ -248,16 +256,20 @@ void loop()
     // If yes, mean for those values can be calculated
     if (averages.hourUpdateCounter == 24)
     {
-      int arrayIndex = hour() - 1;
-      calculateDayAverages(&arrayIndex);
-      dayCounter++;
+      calculateDayAverages(&dayIndex);
+      if (dayIndex == 29)
+      {
+        dayIndex = 0;
+      } else {
+        dayIndex++;
+      }
+      averages.hourUpdateCounter = 0;
     } else {
       // Take measurement and add for the measurements for the current day
       averages.tempsForTheDay[hour()-1] = values.currentTemp;
       averages.humidsForTheDay[hour()-1] = values.currentHumidity;
       averages.hourUpdateCounter++;
     }
-
     previousHour = hour();
   }
   
@@ -266,7 +278,7 @@ void loop()
 
 
   // Check if button is pressed
-  // This triggers the change for a differen view in LCD
+  // This triggers the change for a different view in LCD
   if (switchState == HIGH)
   {
     if (viewState == 0)
@@ -282,25 +294,13 @@ void loop()
   
   // Current temperatures will be displayed if state is 0
   if (viewState == 0)
-  {
-    if (!validCurrents)
-    {
-      updateCurrentValues();
-      validCurrents = true;
-    }
-    
+  {   
     printCurrentValues();
   }
   
   // Average values from the last 30 days will be printed
-  if (viewState == 1)
-  {
-    if (!validAverages)
-    {
-      calculateAverages();
-      validAverages = true;
-    }
-    
+  else if (viewState == 1)
+  {    
     printAverages();
   }
   
