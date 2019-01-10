@@ -82,9 +82,16 @@ void calculateAverages()
       humValidCount++;
     }
   }
+
+  if (tempValidCount == 0 || humValidCount == 0)
+  {
+    values.averageTemp = 0;
+    values.averageHum = 0;
+  } else {
+    values.averageTemp = tempTotal / tempValidCount;
+    values.averageHum = humTotal / humValidCount;
+  }
   
-  values.averageTemp = tempTotal / tempValidCount;
-  values.averageHum = humTotal / humValidCount;
 }
 
 
@@ -110,9 +117,15 @@ void calculateDayAverages(int* arrayIndex)
       humValidCount++;
     }
   }
-  
-  averages.temperatures[*arrayIndex] = tempTotal / tempValidCount;
-  averages.humidities[*arrayIndex] = humTotal / humValidCount;
+
+  if (tempValidCount == 0 || humValidCount == 0)
+  {
+    averages.temperatures[*arrayIndex] = 0;
+    averages.humidities[*arrayIndex] = 0;
+  } else {
+    averages.temperatures[*arrayIndex] = tempTotal / tempValidCount;
+    averages.humidities[*arrayIndex] = humTotal / humValidCount; 
+  }
 }
 
 
@@ -235,12 +248,13 @@ void loop()
     // If yes, mean for those values can be calculated
     if (averages.hourUpdateCounter == 24)
     {
-      calculateDayAverages(&dayCounter);
+      int arrayIndex = hour() - 1;
+      calculateDayAverages(&arrayIndex);
       dayCounter++;
     } else {
       // Take measurement and add for the measurements for the current day
-      averages.tempsForTheDay[hour()] = values.currentTemp;
-      averages.humidsForTheDay[hour()] = values.currentHumidity;
+      averages.tempsForTheDay[hour()-1] = values.currentTemp;
+      averages.humidsForTheDay[hour()-1] = values.currentHumidity;
       averages.hourUpdateCounter++;
     }
 
