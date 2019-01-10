@@ -1,3 +1,6 @@
+// Link for getting the 10 digit time for doing the serial time sync
+// https://www.unixtimestamp.com/index.php
+
 #include <LiquidCrystal.h>
 #include <TimeLib.h>
 #include <dht.h>
@@ -31,14 +34,20 @@ struct MeasurementValues
 // Measurement values from last 30 days
 struct AverageValues
 {
+  // Arrays for storing the values for the month
   float temperatures[30];
   float humidities[30];
+
+  // Variables for tracking the measurements during the day
+  float tempsForTheDay[24];
+  float humidsForTheDay[24];
+  int hourUpdateCounter;
 };
 
 // Initialize all to zero
 MeasurementValues values = {0.0, 0.0, 0.0, 0.0};
 // Values set for debugging
-AverageValues averages = { {21.0, 17.9, 23.2, 19.8, 22.1}, {37.2, 28.4, 19.9, 27.3, 25.0} };
+AverageValues averages = { {0}, {0}, {0}, {0}, 0 };
 
 
 void updateCurrentValues()
@@ -79,6 +88,34 @@ void calculateAverages()
 }
 
 
+void calculateDayAverages(int* arrayIndex)
+{
+  float tempTotal;
+  float humTotal;
+  
+  int tempValidCount = 0;
+  int humValidCount = 0;
+  
+  for (int i = 0; i < 24; i++) 
+  {
+    if (averages.tempsForTheDay[i] != 0)
+    {
+      tempTotal += averages.tempsForTheDay[i];
+      tempValidCount++;
+    }
+    
+    if (averages.humidsForTheDay[i] != 0)
+    {
+      humTotal += averages.humidsForTheDay[i];
+      humValidCount++;
+    }
+  }
+  
+  averages.temperatures[*arrayIndex] = tempTotal / tempValidCount;
+  averages.humidities[*arrayIndex] = humTotal / humValidCount;
+}
+
+
 void printCurrentValues()
 {
   // Update the LCD values
@@ -86,7 +123,7 @@ void printCurrentValues()
   lcd.print("Temp: ");
   lcd.print(values.currentTemp);
   //lcd.print(char(223));
-  lcd.print(" °C");
+  lcd.print(" C");
 
   lcd.setCursor(0,1); 
   lcd.print("Humidity: ");
@@ -97,8 +134,6 @@ void printCurrentValues()
 
 void printAverages()
 {
-  Serial.println();
-  
   lcd.setCursor(0,0); 
   lcd.print("Avg.Temp: ");
   lcd.print(values.averageTemp);
@@ -163,15 +198,20 @@ void loop()
   static bool validAverages = false;
   static bool clearedScreen = false;
   static bool timeSynced = false;
+
+  // Values for tracking the time
+  static int measurementInterval = 10;
+  static int dayCounter = 0;
   static int previousHour = 0;
   static int prevSecond = 0;
 
   // Check if the time has been synced by the pc
+  // Sync needs to happen only once
+  // Copied from the library example
   if (!timeSynced)
   {
     if (Serial.available())
     {
-      // Sync needs to happen only once
       Serial.println("Processing sync message");
       processSyncMessage();
       previousHour = hour();
@@ -180,7 +220,9 @@ void loop()
     }
   }
 
-  if (prevSecond - second() > 15 || second() - prevSecond > 15)
+  // Check if the measurement values have been updated recently
+  if (prevSecond - second() > measurementInterval 
+      || second() - prevSecond > measurementInterval)
   {
     updateCurrentValues();
     prevSecond = second();
@@ -189,8 +231,19 @@ void loop()
   // TODO - get measurements during the day -> add to the array later that day
   if (previousHour != hour())
   {
-    // Take measurement
-    // Update to the arrays for the current day
+    // Check if all the values for the day are collected
+    // If yes, mean for those values can be calculated
+    if (averages.hourUpdateCounter == 24)
+    {
+      calculateDayAverages(&dayCounter);
+      dayCounter++;
+    } else {
+      // Take measurement and add for the measurements for the current day
+      averages.tempsForTheDay[hour()] = values.currentTemp;
+      averages.humidsForTheDay[hour()] = values.currentHumidity;
+      averages.hourUpdateCounter++;
+    }
+
     previousHour = hour();
   }
   
