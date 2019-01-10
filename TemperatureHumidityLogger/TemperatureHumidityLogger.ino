@@ -62,8 +62,8 @@ void updateCurrentValues()
 
 void calculateAverages()
 {
-  float tempTotal;
-  float humTotal;
+  float tempTotal = 0;
+  float humTotal = 0;
   
   int tempValidCount = 0;
   int humValidCount = 0;
@@ -91,14 +91,14 @@ void calculateAverages()
     values.averageTemp = tempTotal / tempValidCount;
     values.averageHum = humTotal / humValidCount;
   }
-  
+
 }
 
 
 void calculateDayAverages(int* arrayIndex)
 {
-  float tempTotal;
-  float humTotal;
+  float tempTotal = 0;
+  float humTotal = 0;
   
   int tempValidCount = 0;
   int humValidCount = 0;
@@ -107,7 +107,8 @@ void calculateDayAverages(int* arrayIndex)
   {
     if (averages.tempsForTheDay[i] != 0)
     {
-      tempTotal += averages.tempsForTheDay[i];
+      float val = averages.tempsForTheDay[i];
+      tempTotal += val;
       tempValidCount++;
     }
     
@@ -126,16 +127,15 @@ void calculateDayAverages(int* arrayIndex)
     averages.temperatures[*arrayIndex] = tempTotal / tempValidCount;
     averages.humidities[*arrayIndex] = humTotal / humValidCount; 
   }
+
 }
 
 
 void printCurrentValues()
 {
-  // Update the LCD values
   lcd.setCursor(0,0); 
   lcd.print("Temp: ");
   lcd.print(values.currentTemp);
-  //lcd.print(char(223));
   lcd.print(" C");
 
   lcd.setCursor(0,1); 
@@ -150,7 +150,6 @@ void printAverages()
   lcd.setCursor(0,0); 
   lcd.print("Avg.Temp: ");
   lcd.print(values.averageTemp);
-  //lcd.print(char(223));
   lcd.print("C");
 
   lcd.setCursor(0,1); 
@@ -193,7 +192,7 @@ void setup()
   pinMode(2, INPUT);
 
   // For setting up the time
-  setSyncProvider(requestSync);  // set function to call when sync required
+  setSyncProvider(requestSync);  // Set function to call when sync required
   Serial.println("Waiting for sync message");
 
   lcd.begin(16, 2);
@@ -215,9 +214,6 @@ void loop()
   // Values for tracking the time
   static int measurementInterval = 10;
   static int dayIndex = 0;
-  static int prevDay = 0;
-  static int previousHour = 0;
-  static int prevSecond = 0;
 
   // Check if the time has been synced by the pc
   // Sync needs to happen only once
@@ -228,17 +224,46 @@ void loop()
     {
       Serial.println("Processing sync message");
       processSyncMessage();
-      previousHour = hour();
       timeSynced = true;
       Serial.println("Time has been synced to the board");
     }
   }
 
+  // Variables for tracking time
+  static int prevDay = day();
+  static int previousHour = hour();
+  static int prevSecond = second();
+
   // If day is different, calculate new averages
   if (prevDay != day())
   {
     calculateAverages();
+      if (dayIndex == 29)
+      {
+        dayIndex = 0;
+      } else {
+        dayIndex++;
+      }
     prevDay = day();
+  }
+
+  // TODO - get measurements during the day -> add to the array later that day
+  if (previousHour != hour())
+  {
+    // Check if all the values for the day are collected
+    if (averages.hourUpdateCounter == 24)
+    {
+      averages.hourUpdateCounter = 0;
+    } else {
+      // Take measurement and add for the measurements for the current day
+      averages.tempsForTheDay[hour()] = values.currentTemp;
+      averages.humidsForTheDay[hour()] = values.currentHumidity;
+      averages.hourUpdateCounter++;
+    }
+    // Do updates in all cases to have the latest update
+    calculateDayAverages(&dayIndex);
+    calculateAverages();
+    previousHour = hour();
   }
 
   // Check if the measurement values have been updated recently
@@ -249,29 +274,6 @@ void loop()
     prevSecond = second();
   }
 
-  // TODO - get measurements during the day -> add to the array later that day
-  if (previousHour != hour())
-  {
-    // Check if all the values for the day are collected
-    // If yes, mean for those values can be calculated
-    if (averages.hourUpdateCounter == 24)
-    {
-      calculateDayAverages(&dayIndex);
-      if (dayIndex == 29)
-      {
-        dayIndex = 0;
-      } else {
-        dayIndex++;
-      }
-      averages.hourUpdateCounter = 0;
-    } else {
-      // Take measurement and add for the measurements for the current day
-      averages.tempsForTheDay[hour()-1] = values.currentTemp;
-      averages.humidsForTheDay[hour()-1] = values.currentHumidity;
-      averages.hourUpdateCounter++;
-    }
-    previousHour = hour();
-  }
   
   // Check the switch position
   switchState = digitalRead(6);
