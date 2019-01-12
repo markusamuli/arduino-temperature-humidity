@@ -46,7 +46,6 @@ struct AverageValues
 
 // Initialize all to zero
 MeasurementValues values = {0.0, 0.0, 0.0, 0.0};
-// Values set for debugging
 AverageValues averages = { {0}, {0}, {0}, {0}, 0 };
 
 
@@ -60,6 +59,7 @@ void updateCurrentValues()
 }
 
 
+// Calculate averages for the whole 30 days
 void calculateAverages()
 {
   float tempTotal = 0;
@@ -83,6 +83,7 @@ void calculateAverages()
     }
   }
 
+  // If there are no temperatures values are set to 0
   if (tempValidCount == 0 || humValidCount == 0)
   {
     values.averageTemp = 0;
@@ -94,7 +95,8 @@ void calculateAverages()
 
 }
 
-
+// Function calculates the averages just for the day
+// Update calculated value to correct index in average values
 void calculateDayAverages(int* arrayIndex)
 {
   float tempTotal = 0;
@@ -131,6 +133,7 @@ void calculateDayAverages(int* arrayIndex)
 }
 
 
+// View 1 - Print out the current values
 void printCurrentValues()
 {
   lcd.setCursor(0,0); 
@@ -145,6 +148,7 @@ void printCurrentValues()
 }
 
 
+// View 2 - Print out the average values
 void printAverages()
 {
   lcd.setCursor(0,0); 
@@ -247,7 +251,8 @@ void loop()
     prevDay = day();
   }
 
-  // TODO - get measurements during the day -> add to the array later that day
+  // When the hour changes, new measurement is taken
+  // If all 24 values are collected, counter is set to 0 again
   if (previousHour != hour())
   {
     // Check if all the values for the day are collected
