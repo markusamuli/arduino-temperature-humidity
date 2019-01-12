@@ -4,6 +4,8 @@ This is a small project created to display temperatures and humidities. The syst
 
 In the device there are two views, one displays the current temperatures and humidities, the other one displays the average measurements. The averages are calculated from the last 30 days, but if there are not enough measurements, only the valid ones are calculated. Average for one day is calculated by taking on measurement every hour and calculating their mean.
 
+DHT11 sensor gives both the temperature and humidity measurements. The switch is used to change the two views and screen contrast can be adjusted by using the potentiometer.
+
 Arduino itself doesn't have a real time clock so while uploading the program the time needs to be synced to the board by giving it in 10 digit time format.
 
 ## Current temperature and humidity view
